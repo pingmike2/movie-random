@@ -1,236 +1,428 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>🎬 Random Movie Copy</title>
+
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
+
+
+<title>
+🎬 随机热门电影
+</title>
+
 
 <style>
+
 body{
-    margin:0;
-    background:#0f172a;
-    color:white;
-    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-    min-height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    padding:20px;
+
+margin:0;
+
+background:#0f172a;
+
+color:white;
+
+font-family:
+-apple-system,
+BlinkMacSystemFont,
+"Segoe UI",
+sans-serif;
+
+height:100vh;
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+padding:20px;
+
 }
 
-.card{
-    width:100%;
-    max-width:700px;
-    background:#1e293b;
-    border-radius:20px;
-    padding:40px;
-    text-align:center;
+
+.box{
+
+max-width:600px;
+
+width:100%;
+
+background:#1e293b;
+
+padding:35px;
+
+border-radius:20px;
+
+text-align:center;
+
 }
+
+
 
 h1{
-    margin-bottom:20px;
+
+margin-bottom:30px;
+
 }
+
+
 
 .movie{
-    font-size:38px;
-    font-weight:700;
-    min-height:120px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    word-break:break-word;
+
+font-size:36px;
+
+font-weight:bold;
+
+min-height:100px;
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
 }
+
+
 
 button{
-    border:none;
-    background:#16a34a;
-    color:white;
-    padding:15px 30px;
-    border-radius:12px;
-    cursor:pointer;
-    font-size:18px;
+
+border:0;
+
+border-radius:12px;
+
+padding:15px 30px;
+
+font-size:18px;
+
+cursor:pointer;
+
+background:#22c55e;
+
+color:white;
+
 }
+
+
 
 button:hover{
-    opacity:.9;
+
+opacity:.8;
+
 }
+
+
 
 .info{
-    margin-top:20px;
-    color:#94a3b8;
+
+margin-top:20px;
+
+color:#94a3b8;
+
+font-size:14px;
+
 }
+
+
+.history{
+
+margin-top:25px;
+
+text-align:left;
+
+}
+
+
+
+.item{
+
+padding:8px;
+
+border-bottom:1px solid #334155;
+
+color:#cbd5e1;
+
+}
+
 
 .toast{
-    position:fixed;
-    bottom:20px;
-    left:50%;
-    transform:translateX(-50%);
-    background:#16a34a;
-    padding:12px 18px;
-    border-radius:8px;
-    display:none;
+
+position:fixed;
+
+bottom:30px;
+
+background:#22c55e;
+
+padding:12px 20px;
+
+border-radius:10px;
+
+display:none;
+
 }
+
+
+
 </style>
+
+
 </head>
+
+
 <body>
 
-<div class="card">
 
-    <h1>🎬 Random Movie</h1>
+<div class="box">
 
-    <div id="movie" class="movie">
-        Loading...
-    </div>
 
-    <button onclick="copyAndNext()">
-        📋 随机复制
-    </button>
+<h1>
+🎬 随机热门电影
+</h1>
 
-    <div class="info" id="info">
-        正在加载电影库...
-    </div>
+
+<div id="movie"
+class="movie">
+
+加载中...
 
 </div>
 
-<div id="toast" class="toast"></div>
+
+<button onclick="copyMovie()">
+
+📋 随机复制
+
+</button>
+
+
+<div class="info"
+id="info">
+
+</div>
+
+
+<div class="history">
+
+<h3>
+最近复制
+</h3>
+
+<div id="history">
+
+</div>
+
+</div>
+
+
+</div>
+
+
+<div id="toast"
+class="toast">
+
+</div>
+
 
 <script>
 
-const DATA_URL =
-"https://raw.githubusercontent.com/prust/wikipedia-movie-data/master/movies.json";
 
-let movies = [];
-let currentMovie = "";
+let movies=[];
 
-let recent =
+let current="";
+
+
+let history =
 JSON.parse(
-    localStorage.getItem("recent_movies")
-    || "[]"
+localStorage.getItem(
+"movie_history"
+)
+||
+"[]"
 );
 
-function showToast(text){
 
-    const toast =
-        document.getElementById("toast");
-
-    toast.innerText = text;
-    toast.style.display = "block";
-
-    setTimeout(()=>{
-        toast.style.display = "none";
-    },1200);
-}
-
-function saveRecent(){
-
-    localStorage.setItem(
-        "recent_movies",
-        JSON.stringify(recent)
-    );
-}
-
-function getRandomMovie(){
-
-    const recentSet =
-        new Set(recent);
-
-    let pool =
-        movies.filter(
-            movie => !recentSet.has(movie)
-        );
-
-    if(pool.length === 0){
-
-        recent = [];
-
-        saveRecent();
-
-        pool = movies;
-    }
-
-    const movie =
-        pool[
-            Math.floor(
-                Math.random() * pool.length
-            )
-        ];
-
-    return movie;
-}
-
-function showNextMovie(){
-
-    currentMovie =
-        getRandomMovie();
-
-    document.getElementById("movie")
-    .innerText =
-        currentMovie;
-}
-
-async function copyAndNext(){
-
-    if(!currentMovie) return;
-
-    await navigator.clipboard.writeText(
-        currentMovie
-    );
-
-    recent.push(currentMovie);
-
-    if(recent.length > 50){
-        recent.shift();
-    }
-
-    saveRecent();
-
-    showToast(
-        "已复制: " + currentMovie
-    );
-
-    showNextMovie();
-
-    document.getElementById("info")
-    .innerText =
-        `电影库: ${movies.length.toLocaleString()} 部 | 最近50次不重复`;
-}
 
 async function init(){
 
-    try{
 
-        const res =
-            await fetch(DATA_URL);
+let res =
+await fetch(
+"./movies.json"
+);
 
-        const data =
-            await res.json();
 
-        movies =
-            [...new Set(
-                data.map(
-                    m => m.title
-                )
-            )];
+movies =
+await res.json();
 
-        document.getElementById("info")
-        .innerText =
-            `电影库: ${movies.length.toLocaleString()} 部`;
 
-        showNextMovie();
+next();
 
-    }catch(err){
 
-        document.getElementById("movie")
-        .innerText =
-            "加载失败";
+update();
 
-        console.error(err);
-    }
+
 }
+
+
+
+function next(){
+
+
+let pool =
+movies.filter(
+m=>!history.includes(m)
+);
+
+
+if(pool.length===0){
+
+history=[];
+
+pool=movies;
+
+}
+
+
+current =
+pool[
+Math.floor(
+Math.random()*pool.length
+)
+];
+
+
+document
+.getElementById("movie")
+.innerText =
+current;
+
+
+}
+
+
+
+async function copyMovie(){
+
+
+await navigator.clipboard.writeText(
+current
+);
+
+
+history.push(current);
+
+
+if(history.length>50){
+
+history.shift();
+
+}
+
+
+localStorage.setItem(
+"movie_history",
+JSON.stringify(history)
+);
+
+
+
+toast(
+"已复制："+current
+);
+
+
+
+next();
+
+
+update();
+
+
+}
+
+
+
+function update(){
+
+
+document
+.getElementById("info")
+.innerText =
+"电影数量："+movies.length;
+
+
+
+let box =
+document.getElementById(
+"history"
+);
+
+
+box.innerHTML="";
+
+
+history
+.slice(-10)
+.reverse()
+.forEach(
+m=>{
+
+let div =
+document.createElement(
+"div"
+);
+
+div.className="item";
+
+div.innerText=m;
+
+box.appendChild(div);
+
+}
+
+);
+
+
+}
+
+
+
+function toast(text){
+
+
+let t =
+document.getElementById(
+"toast"
+);
+
+
+t.innerText=text;
+
+t.style.display="block";
+
+
+setTimeout(
+()=>{
+
+t.style.display="none";
+
+},
+1500
+);
+
+
+}
+
+
 
 init();
 
+
 </script>
 
+
 </body>
+
 </html>
