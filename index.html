@@ -83,6 +83,8 @@ align-items:center;
 
 justify-content:center;
 
+word-break:break-word;
+
 }
 
 
@@ -153,6 +155,10 @@ position:fixed;
 
 bottom:30px;
 
+left:50%;
+
+transform:translateX(-50%);
+
 background:#22c55e;
 
 padding:12px 20px;
@@ -209,9 +215,11 @@ id="info">
 最近复制
 </h3>
 
+
 <div id="history">
 
 </div>
+
 
 </div>
 
@@ -233,6 +241,8 @@ let movies=[];
 let current="";
 
 
+// 保存最近复制记录
+
 let history =
 JSON.parse(
 localStorage.getItem(
@@ -243,59 +253,152 @@ localStorage.getItem(
 );
 
 
+// GitHub Raw 地址
+
+const MOVIE_URL =
+
+"https://raw.githubusercontent.com/pingmike2/movie-random/main/movies.json";
+
+
+
+
+// 初始化
 
 async function init(){
 
 
+try{
+
+
 let res =
+
 await fetch(
-"./movies.json?v=" + Date.now()
+
+MOVIE_URL
+
++
+"?v="
+
++
+Date.now()
+
 );
 
 
+
+if(!res.ok){
+
+throw new Error(
+"HTTP "
++
+res.status
+);
+
+}
+
+
+
 movies =
+
 await res.json();
+
+
+
+if(!movies.length){
+
+throw new Error(
+"Movie list empty"
+);
+
+}
+
 
 
 next();
 
-
 update();
 
 
-}
-
-
-
-function next(){
-
-
-let pool =
-movies.filter(
-m=>!history.includes(m)
-);
-
-
-if(pool.length===0){
-
-history=[];
-
-pool=movies;
 
 }
 
+catch(e){
 
-current =
-pool[
-Math.floor(
-Math.random()*pool.length
-)
-];
+
+console.error(e);
 
 
 document
 .getElementById("movie")
 .innerText =
+
+"电影库加载失败";
+
+
+document
+.getElementById("info")
+.innerText =
+
+"请检查 GitHub 文件";
+
+
+}
+
+
+}
+
+
+
+
+// 随机下一部
+
+function next(){
+
+
+
+let pool =
+
+movies.filter(
+
+m=>
+
+!history.includes(m)
+
+);
+
+
+
+if(pool.length===0){
+
+
+history=[];
+
+
+pool=movies;
+
+
+}
+
+
+
+current =
+
+pool[
+
+Math.floor(
+
+Math.random()*pool.length
+
+)
+
+];
+
+
+
+document
+.getElementById("movie")
+.innerText =
+
 current;
 
 
@@ -303,33 +406,64 @@ current;
 
 
 
+
+
+// 复制并切换
+
 async function copyMovie(){
 
 
-await navigator.clipboard.writeText(
-current
-);
+if(!current){
 
-
-history.push(current);
-
-
-if(history.length>50){
-
-history.shift();
+return;
 
 }
 
 
+
+try{
+
+
+await navigator.clipboard.writeText(
+
+current
+
+);
+
+
+
+history.push(
+
+current
+
+);
+
+
+
+if(history.length>50){
+
+
+history.shift();
+
+
+}
+
+
+
 localStorage.setItem(
+
 "movie_history",
+
 JSON.stringify(history)
+
 );
 
 
 
 toast(
-"已复制："+current
+
+"已复制：" + current
+
 );
 
 
@@ -340,84 +474,145 @@ next();
 update();
 
 
+
+}
+
+catch(e){
+
+
+toast(
+
+"复制失败"
+
+);
+
+
 }
 
 
 
+}
+
+
+
+
+
+// 更新显示
+
 function update(){
+
 
 
 document
 .getElementById("info")
 .innerText =
-"电影数量："+movies.length;
+
+"电影数量："
+
++
+movies.length;
 
 
 
 let box =
+
 document.getElementById(
+
 "history"
+
 );
+
 
 
 box.innerHTML="";
 
 
+
 history
+
 .slice(-10)
+
 .reverse()
+
 .forEach(
+
 m=>{
 
+
 let div =
+
 document.createElement(
+
 "div"
+
 );
+
+
 
 div.className="item";
 
+
 div.innerText=m;
 
+
+
 box.appendChild(div);
+
+
 
 }
 
 );
 
 
+
 }
 
 
+
+
+// 提示
 
 function toast(text){
 
 
+
 let t =
+
 document.getElementById(
+
 "toast"
+
 );
+
 
 
 t.innerText=text;
 
+
+
 t.style.display="block";
 
 
-setTimeout(
-()=>{
+
+setTimeout(()=>{
+
 
 t.style.display="none";
 
-},
-1500
-);
+
+},1500);
+
 
 
 }
 
 
 
+
+
 init();
+
 
 
 </script>
