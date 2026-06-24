@@ -1,87 +1,223 @@
 name: Update TMDB Movies
 
 on:
+
   schedule:
-    # 每天北京时间 10:00
+    # UTC 02:00 = 北京时间 10:00
     - cron: "0 2 * * *"
 
   workflow_dispatch:
+
 
 permissions:
   contents: write
 
 
+
 jobs:
 
-  update:
+  update-movies:
 
     runs-on: ubuntu-latest
 
+
     steps:
 
-      - name: Checkout
+
+      - name: Checkout repository
+
         uses: actions/checkout@v4
 
 
-      - name: Fetch TMDB Movies
+
+      - name: Check TMDB Token
+
         env:
+
           TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
 
         run: |
 
-          python3 << 'EOF'
+          echo "Checking token..."
 
-          import requests
+          if [ -z "$TMDB_TOKEN" ]; then
+
+            echo "ERROR: TMDB_TOKEN is empty"
+
+            exit 1
+
+          fi
+
+
+          echo "Token exists"
+
+          echo "Token length: ${#TMDB_TOKEN}"
+
+
+
+
+
+      - name: Install Python dependency
+
+        run: |
+
+          python3 -m pip install requests
+
+
+
+
+
+      - name: Fetch TMDB Chinese Movies
+
+        env:
+
+          TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
+
+        run: |
+
+          python3 << 'PYTHON'
+
+
+          import os
+
           import json
 
+          import requests
 
-          TOKEN = "${TMDB_TOKEN}"
+
+
+          TOKEN = os.environ["TMDB_TOKEN"]
+
 
 
           headers = {
+
               "Authorization": f"Bearer {TOKEN}",
+
               "accept": "application/json"
+
           }
+
+
+
+          urls = [
+
+
+              # 每周热门
+
+              "https://api.themoviedb.org/3/trending/movie/week?language=zh-CN&page=1",
+
+
+              # 热门电影 多页
+
+              "https://api.themoviedb.org/3/movie/popular?language=zh-CN&page=1",
+
+              "https://api.themoviedb.org/3/movie/popular?language=zh-CN&page=2",
+
+              "https://api.themoviedb.org/3/movie/popular?language=zh-CN&page=3",
+
+
+              # 高分电影
+
+              "https://api.themoviedb.org/3/movie/top_rated?language=zh-CN&page=1",
+
+              "https://api.themoviedb.org/3/movie/top_rated?language=zh-CN&page=2",
+
+
+              # 即将上映
+
+              "https://api.themovied.org/3/movie/upcoming?language=zh-CN&page=1"
+
+
+          ]
+
 
 
           movies = []
 
 
-          urls = [
-
-          "https://api.themoviedb.org/3/trending/movie/week?language=zh-CN&page=1",
-
-          "https://api.themoviedb.org/3/movie/popular?language=zh-CN&page=1",
-
-          "https://api.themoviedb.org/3/movie/popular?language=zh-CN&page=2",
-
-          "https://api.themoviedb.org/3/movie/top_rated?language=zh-CN&page=1",
-
-          "https://api.themoviedb.org/3/movie/top_rated?language=zh-CN&page=2"
-
-          ]
-
 
           for url in urls:
 
-              r = requests.get(
+
+              print("====================")
+
+              print(url)
+
+
+              response = requests.get(
+
                   url,
-                  headers=headers
+
+                  headers=headers,
+
+                  timeout=20
+
               )
 
-              data = r.json()
 
 
-              for item in data.get("results", []):
+              print(
+
+                  "HTTP:",
+
+                  response.status_code
+
+              )
+
+
+
+              if response.status_code != 200:
+
+                  print(response.text)
+
+                  continue
+
+
+
+              data = response.json()
+
+
+
+              results = data.get(
+
+                  "results",
+
+                  []
+
+              )
+
+
+
+              print(
+
+                  "Found:",
+
+                  len(results)
+
+              )
+
+
+
+              for item in results:
+
 
                   title = (
+
                       item.get("title")
+
                       or
+
                       item.get("name")
+
                   )
 
+
                   if title:
+
                       movies.append(title)
+
+
 
 
 
@@ -90,45 +226,98 @@ jobs:
           movies = list(dict.fromkeys(movies))
 
 
-          # 保存
 
-          with open(
-              "movies.json",
-              "w",
-              encoding="utf-8"
-          ) as f:
-
-              json.dump(
-                  movies,
-                  f,
-                  ensure_ascii=False,
-                  indent=2
-              )
-
+          print("====================")
 
           print(
-              "Movies:",
+
+              "Total movies:",
+
               len(movies)
+
           )
 
 
-          EOF
+
+          if len(movies) == 0:
+
+              raise Exception(
+
+                  "No movies received from TMDB"
+
+              )
 
 
 
-      - name: Commit changes
+
+
+          with open(
+
+              "movies.json",
+
+              "w",
+
+              encoding="utf-8"
+
+          ) as f:
+
+
+              json.dump(
+
+                  movies,
+
+                  f,
+
+                  ensure_ascii=False,
+
+                  indent=2
+
+              )
+
+
+
+          PYTHON
+
+
+
+
+
+      - name: Show result
 
         run: |
 
-          git config user.name github-actions
+          echo "movies.json preview:"
 
-          git config user.email github-actions@github.com
+          head -30 movies.json
+
+
+
+
+
+      - name: Commit and push
+
+        run: |
+
+
+          git config user.name \
+
+          "github-actions[bot]"
+
+
+          git config user.email \
+
+          "41898282+github-actions[bot]@users.noreply.github.com"
+
 
 
           git add movies.json
 
 
-          git commit -m "Update movies database" || exit 0
+
+          git commit \
+
+          -m "Update TMDB movie list" || echo "No changes"
+
 
 
           git push
