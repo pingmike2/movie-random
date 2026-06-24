@@ -1,21 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎬 Random Movie Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🎬 Random Movie Copy</title>
 
 <style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
 body{
+    margin:0;
     background:#0f172a;
-    color:#fff;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:white;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
     min-height:100vh;
     display:flex;
     justify-content:center;
@@ -23,88 +18,46 @@ body{
     padding:20px;
 }
 
-.container{
-    width:100%;
-    max-width:800px;
-}
-
 .card{
+    width:100%;
+    max-width:700px;
     background:#1e293b;
     border-radius:20px;
-    padding:30px;
+    padding:40px;
     text-align:center;
-    box-shadow:0 10px 30px rgba(0,0,0,.3);
 }
 
 h1{
-    margin-bottom:10px;
-}
-
-.subtitle{
-    color:#94a3b8;
-    margin-bottom:25px;
+    margin-bottom:20px;
 }
 
 .movie{
-    font-size:36px;
+    font-size:38px;
     font-weight:700;
-    min-height:100px;
+    min-height:120px;
     display:flex;
     align-items:center;
     justify-content:center;
     word-break:break-word;
-    padding:20px;
-}
-
-.buttons{
-    display:flex;
-    gap:10px;
-    justify-content:center;
-    flex-wrap:wrap;
 }
 
 button{
     border:none;
-    border-radius:12px;
-    padding:12px 20px;
-    cursor:pointer;
-    font-size:16px;
-}
-
-.copy{
     background:#16a34a;
     color:white;
+    padding:15px 30px;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:18px;
 }
 
-.next{
-    background:#2563eb;
-    color:white;
+button:hover{
+    opacity:.9;
 }
 
-.reload{
-    background:#ea580c;
-    color:white;
-}
-
-.stats{
+.info{
     margin-top:20px;
     color:#94a3b8;
-    font-size:14px;
-}
-
-.history{
-    margin-top:30px;
-    text-align:left;
-}
-
-.history h3{
-    margin-bottom:10px;
-}
-
-.history-item{
-    padding:8px 0;
-    border-bottom:1px solid #334155;
-    color:#cbd5e1;
 }
 
 .toast{
@@ -113,62 +66,28 @@ button{
     left:50%;
     transform:translateX(-50%);
     background:#16a34a;
-    color:white;
     padding:12px 18px;
-    border-radius:10px;
+    border-radius:8px;
     display:none;
-    z-index:999;
-}
-
-.loading{
-    color:#fbbf24;
 }
 </style>
 </head>
 <body>
 
-<div class="container">
+<div class="card">
 
-    <div class="card">
+    <h1>🎬 Random Movie</h1>
 
-        <h1>🎬 Random Movie Generator</h1>
+    <div id="movie" class="movie">
+        Loading...
+    </div>
 
-        <div class="subtitle">
-            30,000+ Movies • No API Key Required
-        </div>
+    <button onclick="copyAndNext()">
+        📋 随机复制
+    </button>
 
-        <div id="movie" class="movie loading">
-            Loading Movie Database...
-        </div>
-
-        <div class="buttons">
-
-            <button class="copy" onclick="copyMovie()">
-                📋 Copy Movie
-            </button>
-
-            <button class="next" onclick="nextMovie()">
-                🎲 Next Movie
-            </button>
-
-            <button class="reload" onclick="reloadMoviePool()">
-                🔄 Refresh
-            </button>
-
-        </div>
-
-        <div class="stats" id="stats">
-            Loading...
-        </div>
-
-        <div class="history">
-
-            <h3>Recent Movies</h3>
-
-            <div id="history"></div>
-
-        </div>
-
+    <div class="info" id="info">
+        正在加载电影库...
     </div>
 
 </div>
@@ -181,106 +100,81 @@ const DATA_URL =
 "https://raw.githubusercontent.com/prust/wikipedia-movie-data/master/movies.json";
 
 let movies = [];
-let currentMovie = null;
+let currentMovie = "";
 
 let recent =
 JSON.parse(
-    localStorage.getItem("movie_history") || "[]"
+    localStorage.getItem("recent_movies")
+    || "[]"
 );
 
-function showToast(msg){
+function showToast(text){
 
     const toast =
         document.getElementById("toast");
 
-    toast.textContent = msg;
+    toast.innerText = text;
     toast.style.display = "block";
 
     setTimeout(()=>{
         toast.style.display = "none";
-    },1500);
+    },1200);
 }
 
-function updateHistory(){
-
-    const box =
-        document.getElementById("history");
-
-    box.innerHTML = "";
-
-    [...recent]
-    .reverse()
-    .slice(0,10)
-    .forEach(movie=>{
-
-        const div =
-            document.createElement("div");
-
-        div.className =
-            "history-item";
-
-        div.textContent =
-            movie;
-
-        box.appendChild(div);
-
-    });
-}
-
-function saveHistory(){
+function saveRecent(){
 
     localStorage.setItem(
-        "movie_history",
+        "recent_movies",
         JSON.stringify(recent)
     );
 }
 
-function updateStats(){
-
-    document.getElementById("stats")
-    .innerHTML =
-        `Movies Loaded: ${movies.length.toLocaleString()} |
-         Recent Cache: ${recent.length}/50`;
-}
-
-function randomItem(arr){
-
-    return arr[
-        Math.floor(
-            Math.random()*arr.length
-        )
-    ];
-}
-
-function nextMovie(){
-
-    if(!movies.length){
-        return;
-    }
+function getRandomMovie(){
 
     const recentSet =
         new Set(recent);
 
     let pool =
         movies.filter(
-            m => !recentSet.has(m)
+            movie => !recentSet.has(movie)
         );
 
     if(pool.length === 0){
 
         recent = [];
 
-        saveHistory();
+        saveRecent();
 
         pool = movies;
     }
 
+    const movie =
+        pool[
+            Math.floor(
+                Math.random() * pool.length
+            )
+        ];
+
+    return movie;
+}
+
+function showNextMovie(){
+
     currentMovie =
-        randomItem(pool);
+        getRandomMovie();
 
     document.getElementById("movie")
-    .textContent =
+    .innerText =
         currentMovie;
+}
+
+async function copyAndNext(){
+
+    if(!currentMovie) return;
+
+    await navigator.clipboard.writeText(
+        currentMovie
+    );
 
     recent.push(currentMovie);
 
@@ -288,28 +182,20 @@ function nextMovie(){
         recent.shift();
     }
 
-    saveHistory();
-
-    updateHistory();
-    updateStats();
-}
-
-async function copyMovie(){
-
-    if(!currentMovie){
-        return;
-    }
-
-    await navigator.clipboard.writeText(
-        currentMovie
-    );
+    saveRecent();
 
     showToast(
-        "Copied: " + currentMovie
+        "已复制: " + currentMovie
     );
+
+    showNextMovie();
+
+    document.getElementById("info")
+    .innerText =
+        `电影库: ${movies.length.toLocaleString()} 部 | 最近50次不重复`;
 }
 
-async function loadMovies(){
+async function init(){
 
     try{
 
@@ -319,59 +205,30 @@ async function loadMovies(){
         const data =
             await res.json();
 
-        const unique =
-            new Set();
-
-        data.forEach(movie=>{
-
-            if(movie.title){
-
-                unique.add(
-                    movie.title.trim()
-                );
-
-            }
-
-        });
-
         movies =
-            Array.from(unique);
+            [...new Set(
+                data.map(
+                    m => m.title
+                )
+            )];
 
-        document
-        .getElementById("movie")
-        .classList
-        .remove("loading");
+        document.getElementById("info")
+        .innerText =
+            `电影库: ${movies.length.toLocaleString()} 部`;
 
-        updateStats();
-
-        nextMovie();
+        showNextMovie();
 
     }catch(err){
 
-        console.error(err);
+        document.getElementById("movie")
+        .innerText =
+            "加载失败";
 
-        document
-        .getElementById("movie")
-        .textContent =
-        "Failed to load movie database";
+        console.error(err);
     }
 }
 
-async function reloadMoviePool(){
-
-    recent = [];
-
-    saveHistory();
-
-    nextMovie();
-
-    showToast(
-        "History Cleared"
-    );
-}
-
-updateHistory();
-loadMovies();
+init();
 
 </script>
 
