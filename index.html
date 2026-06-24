@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎬 Random Popular Movies</title>
+
+<style>
+body{
+    background:#0f172a;
+    color:#fff;
+    font-family:Arial,sans-serif;
+    max-width:1200px;
+    margin:auto;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+}
+
+.actions{
+    text-align:center;
+    margin:20px 0;
+}
+
+button{
+    border:none;
+    padding:10px 18px;
+    border-radius:8px;
+    cursor:pointer;
+    margin:5px;
+}
+
+.reload{
+    background:#2563eb;
+    color:white;
+}
+
+.copyall{
+    background:#16a34a;
+    color:white;
+}
+
+.movie{
+    background:#1e293b;
+    margin:8px 0;
+    padding:12px;
+    border-radius:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.copy{
+    background:#334155;
+    color:white;
+}
+</style>
+</head>
+<body>
+
+<h1>🎬 Random Popular Movies</h1>
+
+<div class="actions">
+    <button class="reload" onclick="loadMovies()">
+        随机生成
+    </button>
+
+    <button class="copyall" onclick="copyRandomMovie()">
+        随机复制一个
+    </button>
+</div>
+
+<div id="status">加载中...</div>
+<div id="movies"></div>
+
+<script>
+
+let currentMovies=[];
+
+/*
+公开 IMDb Top250 JSON
+无需 Key
+*/
+const DATA_URL =
+"https://raw.githubusercontent.com/hjorturlarsen/IMDB-top-100/master/data/movies.json";
+
+function shuffle(arr){
+    return [...arr].sort(() => Math.random()-0.5);
+}
+
+async function loadMovies(){
+
+    const status=document.getElementById("status");
+    const container=document.getElementById("movies");
+
+    status.innerText="正在获取电影数据...";
+    container.innerHTML="";
+
+    try{
+
+        const res=await fetch(DATA_URL);
+        const data=await res.json();
+
+        currentMovies=shuffle(data).slice(0,100);
+
+        status.innerText=
+            `已加载 ${currentMovies.length} 部随机热门电影`;
+
+        currentMovies.forEach(movie=>{
+
+            const row=document.createElement("div");
+            row.className="movie";
+
+            row.innerHTML=`
+                <span>
+                    ${movie.rank}. ${movie.title}
+                </span>
+
+                <button class="copy">
+                    复制
+                </button>
+            `;
+
+            row.querySelector("button").onclick=()=>{
+
+                navigator.clipboard.writeText(
+                    movie.title
+                );
+
+                row.querySelector("button").innerText="已复制";
+
+                setTimeout(()=>{
+                    row.querySelector("button").innerText="复制";
+                },1000);
+
+            };
+
+            container.appendChild(row);
+
+        });
+
+    }catch(err){
+
+        status.innerText=
+            "加载失败，请刷新页面";
+
+        console.error(err);
+
+    }
+}
+
+function copyRandomMovie(){
+
+    if(!currentMovies.length) return;
+
+    const movie=
+        currentMovies[
+            Math.floor(
+                Math.random()*currentMovies.length
+            )
+        ];
+
+    navigator.clipboard.writeText(movie.title);
+
+    alert(
+        "已复制：\n\n"+movie.title
+    );
+
+}
+
+loadMovies();
+
+</script>
+
+</body>
+</html>
